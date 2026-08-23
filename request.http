@@ -1,0 +1,122 @@
+### REGISTER POST 
+POST http://localhost:3001/api/auth/register
+Content-Type: application/json
+
+{
+    "username": "prueba",
+    "email": "prueba@gmail.com",
+    "password": "contraseña123"
+}
+
+### LOGIN POST 
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "rolo@gmail.com",
+    "password": "rolo123"
+}
+
+### PETICIONES DE PRODUCTOS
+
+### POST CREAR PRODUCTO
+POST http://localhost:3001/api/products
+Content-Type: application/json
+
+{
+    "name": "Taza de One Piece",
+    "description": "Taza de One Piece con una descripción lo suficientemente larga para que pase la validación",
+    "price": 10000,
+    "stock": 10,
+    "imageUrl": "https://res.cloudinary.com/dhls84sly/image/upload/v1755872330/taza_tralaleroTralala_a8gnuh.webp"
+}
+
+### PUT ACTUALIZAR PRODUCTO
+PUT http://localhost:3001/api/products/68e8d06950f65ace6f8f2219
+Content-Type: application/json
+
+{
+  
+    "price": 5000
+
+}
+
+### GET OBTENER PRODUCTO POR ID
+GET  http://localhost:3001/api/products/68e8d06950f65ace6f8f2219
+
+### GET OBTENER TODOS LOS PRODUCTOS
+GET  http://localhost:3001/api/products
+
+### DELETE ELIMINAR UN PRODUCTO POR SU
+DELETE  http://localhost:3001/api/products/68ed923401051cdf05a9339f
+
+
+### ADD TO CART
+POST http://localhost:3001/api/cart/add
+Content-Type: application/json
+
+{
+    "userId": "6a810fc0697968bc658800c1",
+    "productId": "6a7e81dda4d681ca143bf1ca",
+    "quantity": 1
+}
+
+### GET CART
+GET  http://localhost:3001/api/cart/get/68db32b4911ffe91d2eb26d6
+
+### UPDATE CART
+PUT http://localhost:3001/api/cart/update/68db32b4911ffe91d2eb26d6
+Content-Type: application/json
+
+{
+    "productId": "68e8c79c2b9db47045761a99",
+    "quantity": 3
+}
+
+### DELETE PRODUCT FROM CART
+DELETE http://localhost:3001/api/cart/removeProduct/68db32b4911ffe91d2eb26d6
+Content-Type: application/json
+
+{
+    "productId": "68e8c79c2b9db47045761a99"
+}
+
+### CLEAR CART
+DELETE http://localhost:3001/api/cart/clear/68db32b4911ffe91d2eb26d6
+Content-Type: application/json
+
+### GET CART TOTAL
+GET http://localhost:3001/api/cart/total/68db32b4911ffe91d2eb26d6
+
+
+### Crear orden con productos del carrito
+POST http://localhost:3001/api/orders/create
+Content-Type: application/json
+
+{
+  "userId": "68fbb1fc0cd8b7103afbdd2a",
+  "items": [
+    {
+      "id": "68e8c79c2b9db47045761a99",
+      "name": "Taza de One Piece",
+      "quantity": 2,
+      "unit_price": 10000,
+      "imageUrl": "https://res.cloudinary.com/dhls84sly/image/upload/v1757002888/onepiece_pp9ypj.webp"
+    }
+  ],
+  "payer": {
+    "email": "cliente@ejemplo.com"
+  },
+  "shippingInfo": {
+    "firstName": "Juan",
+    "lastName": "Pérez",
+    "address": {
+      "street": "Av. Corrientes",
+      "number": "1234",
+      "city": "Buenos Aires",
+      "state": "CABA",
+      "zipCode": "C1043AAZ"
+    },
+    "phone": "1123456789"
+  }
+}

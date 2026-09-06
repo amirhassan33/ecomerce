@@ -94,14 +94,14 @@ POST http://localhost:3001/api/orders/create
 Content-Type: application/json
 
 {
-  "userId": "68fbb1fc0cd8b7103afbdd2a",
+  "userId": "6a810fc0697968bc658800c1",
   "items": [
     {
-      "id": "68e8c79c2b9db47045761a99",
-      "name": "Taza de One Piece",
+      "id": "6a7fb1920877d0829a0d4ab8",
+      "name": "Taza larga",
       "quantity": 2,
       "unit_price": 10000,
-      "imageUrl": "https://res.cloudinary.com/dhls84sly/image/upload/v1757002888/onepiece_pp9ypj.webp"
+      "imageUrl": "https://www.gstatic.com/webp/gallery/1.webp"
     }
   ],
   "payer": {

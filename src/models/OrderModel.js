@@ -7,6 +7,7 @@ const OrderSchema = new mongoose.Schema(
             ref: 'User',
             required: false,
         },
+
         products: [
             {
                 productId: {
@@ -14,10 +15,7 @@ const OrderSchema = new mongoose.Schema(
                     ref: 'Product',
                     required: true,
                 },
-                name: {
-                    type: String,
-                    required: true,
-                },
+                name: String,
                 price: {
                     type: Number,
                     required: true,
@@ -26,17 +24,16 @@ const OrderSchema = new mongoose.Schema(
                     type: Number,
                     required: true,
                 },
-                imageUrl: {
-                    type: String,
-                    required: true,
-                },
+                imageUrl: String,
             },
         ],
+
         totalAmount: {
             type: Number,
             required: true,
             min: 0,
         },
+
         status: {
             type: String,
             enum: [
@@ -48,19 +45,49 @@ const OrderSchema = new mongoose.Schema(
             ],
             default: 'pending',
         },
+
+        shippingInfo: {
+            firstName: {
+                type: String,
+                required: true,
+            },
+            lastName: {
+                type: String,
+                required: true,
+            },
+            email: String,
+            phone: {
+                type: String,
+                required: true,
+            },
+            address: {
+                street: {
+                    type: String,
+                    required: true,
+                },
+                number: {
+                    type: String,
+                    required: true,
+                },
+                city: {
+                    type: String,
+                    required: true,
+                },
+                state: {
+                    type: String,
+                    required: true,
+                },
+                zipCode: {
+                    type: String,
+                    required: true,
+                },
+            },
+        },
+
         mercadoPagoData: {
-            preferenceId: {
-                type: String,
-                required: false,
-            },
-            payerEmail: {
-                type: String,
-                required: false,
-            },
-            paymentId: {
-                type: String,
-                required: false,
-            },
+            preferenceId: String,
+            payerEmail: String,
+            paymentId: String,
             paymentStatus: {
                 type: String,
                 enum: [
@@ -72,61 +99,12 @@ const OrderSchema = new mongoose.Schema(
                 ],
                 default: 'pending',
             },
-            transactionAmount: {
-                type: Number,
-                required: false,
-            },
-            paymentMethodId: {
-                type: String,
-                required: false,
-            },
-            paidAt: {
-                type: Date,
-                required: false,
-            },
-            shippingInfo: {
-                firstName: {
-                    type: String,
-                    required: true,
-                },
-                lastName: {
-                    type: String,
-                    required: true,
-                },
-                email: {
-                    type: String,
-                    required: false,
-                },
-                phone: {
-                    type: String,
-                    required: true,
-                },
-                address: {
-                    street: {
-                        type: String,
-                        required: true,
-                    },
-                    number: {
-                        type: String,
-                        required: true,
-                    },
-                    city: {
-                        type: String,
-                        required: true,
-                    },
-                    state: {
-                        type: String,
-                        required: true,
-                    },
-                    zipCode: {
-                        type: String,
-                        required: true,
-                    },
-                },
-            },
+            transactionAmount: Number,
+            paymentMethodId: String,
+            paidAt: Date,
         },
     },
     { timestamps: true }
 )
 
-export default mongoose.model('Model', OrderSchema)
+export default mongoose.model('Order', OrderSchema)

@@ -16,34 +16,30 @@ const validateSignature = (req, res) => {
         }
 
         // Split por coma
-        const parts = signature.split(',')
+        const parts = signature.split(',').map((part) => part.trim())
 
-        const ts = parts.find((part) => part.startWith('ts=').split('=')[1])
-        const hash = parts.find((part) => part.startWith('v1='.split('=')[1]))
+        const ts = parts.find((part) => part.startsWith('ts='))?.split('=')[1]
+        const hash = parts.find((part) => part.startsWith('v1='))?.split('=')[1]
 
         // Obtener x-request-id del header
         const xRequestId = req.headers['x-request-id']
 
         // Obtener data.id según el formato del webhook
-        let dataId
-        let webhookFormat = 'unknown'
+        // Usar el ID de la URL para verificar la firma
+        const dataId = req.query['data.id']
 
-        // Detectar formato del webhook
-        if (req.body?.data?.id && req.body?.type === 'payment') {
-            // Formato v1: MercadoPago webhook v1.0
-            dataId = req.body.data.id
-            webhookFormat = 'v1'
-        } else if (req.body?.resoucer && req.body?.topic === 'payment') {
-            // Formato v2: MercadoPago Feed v2.0
-            dataId = req.body.resource
-            webhookFormat = 'v2'
-        } else {
-            dataId = req.query.id || req.query['data.id']
-            webhookFormat = 'fallback'
+        if (
+            typeof dataId !== 'string' ||
+            !dataId ||
+            !xRequestId ||
+            !ts ||
+            !hash
+        ) {
+            return false
         }
 
         // Crear manifest según la documentación oficial
-        const manifest = `id:${dataId};request-id:${xRequestId};ts;${ts};`
+        const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
 
         // Generar el hash esperado
         const expectedHash = crypto
@@ -64,83 +60,133 @@ const validateSignature = (req, res) => {
 }
 
 const webHookController = async (req, res) => {
-    // Verificar si es un webhook de payment
-    const { type, topic } = req.body
+    try {
+        const type = req.body?.type || req.query.type
 
-    // Solo procesar webhooks de payment, ignorar merchant_order
-
-    if (type !== 'payment' && topic !== 'payment') {
-        return res
-            .status(400)
-            .json({ message: 'Webhook ignorado - Solo procesamos payments' })
-    }
-
-    // Validar el signature
-    if (!validateSignature(req)) {
-        return res.status(401).json({ error: 'No autorizado' })
-    }
-
-    // Obtener datos del pago
-    const { data } = req.body
-
-    // Obtenemos el id del pago
-    const { id: paymentId } = data
-
-    // Obtenemos información completa del pago desde MP
-    const payment = await new Payment(client).get({
-        id: paymentId,
-    })
-
-    // Buscar la orden usando external_reference
-    const order = await OrderModel.findById(payment.external_reference)
-
-    // Verificar si la orden existe o no
-    if (!order) {
-        return res.status(400).json({ message: 'Orden no encontrada' })
-    }
-
-    // Actualizar la orden según estado del pago
-    if (payment.status === 'approved') {
-        await OrderModel.findByIdAndUpdate(order._id, {
-            status: 'approved',
-        })
-
-        // Actualizar campos de pago
-        order.mercadoPagoData.paymentId = paymentId
-        order.mercadoPagoData.paymentStatus = payment.status
-        order.mercadoPagoData.transactionAmount = payment.transaction_amount
-        order.mercadoPagoData.paymentMethodId = payment.payment_method_id
-        order.mercadoPagoData.paidAt = payment.date_approved
-
-        // Podemos reducir el stock
-        // Recorrer cada item de la orden
-        for (const item of order.products) {
-            // Buscar el producto por su ID
-            const product = await ProductModel.findById(item.productId)
-
-            // Verificamos si hay stock disponible
-            if (product.stock < item.quantity) {
-                return res.status(400).json({
-                    message: 'Stock insuficiente para ' + product.name,
-                })
-            }
-
-            // Actualizar el stock
-            product.stock -= item.quantity
-            await product.save()
+        // Este controlador procesa Webhooks de payment
+        if (type !== 'payment') {
+            return res.status(200).json({
+                message: 'Notificación ignorada',
+            })
         }
 
-        // Guardar cambios
-        await order.save()
-    } else {
-        await OrderModel.findByIdAndUpdate(order._id, {
-            status: 'rejected',
+        if (!validateSignature(req)) {
+            return res.status(401).json({
+                message: 'Firma inválida',
+            })
+        }
+
+        // Consultamos el mismo ID utilizado para validar la firma
+        const paymentId = req.query['data.id']
+        const payment = await new Payment(client).get({
+            id: paymentId,
+        })
+
+        const orderId = payment.external_reference
+
+        if (typeof orderId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(orderId)) {
+            return res.status(400).json({
+                message: 'El pago no tiene una referencia de orden válida',
+            })
+        }
+
+        // Estados que admite tu modelo actual
+        const supportedStatuses = [
+            'pending',
+            'approved',
+            'rejected',
+            'cancelled',
+            'in_process',
+        ]
+
+        if (!supportedStatuses.includes(payment.status)) {
+            console.warn('Estado no implementado:', payment.status)
+
+            return res.status(200).json({
+                message: 'Estado no implementado; requiere revisión',
+            })
+        }
+
+        // Guardar orden y stock juntos:
+        // si algo falla, se revierten los cambios de esta transacción
+        await OrderModel.db.transaction(async (session) => {
+            const order = await OrderModel.findById(orderId).session(session)
+
+            if (!order) {
+                throw new Error('Orden no encontrada')
+            }
+
+            // Una orden ya procesada no vuelve a descontar stock
+            if (order.status === 'approved') {
+                return
+            }
+
+            if (payment.status === 'approved') {
+                const paidAmount = Number(payment.transaction_amount)
+
+                if (
+                    !Number.isFinite(paidAmount) ||
+                    Math.round(paidAmount * 100) !==
+                        Math.round(order.totalAmount * 100) ||
+                    payment.currency_id !== 'ARS'
+                ) {
+                    throw new Error(
+                        'El importe o la moneda no coincide con la orden'
+                    )
+                }
+
+                for (const item of order.products) {
+                    if (
+                        !Number.isInteger(item.quantity) ||
+                        item.quantity <= 0
+                    ) {
+                        throw new Error('Cantidad de producto inválida')
+                    }
+
+                    const result = await ProductModel.updateOne(
+                        {
+                            _id: item.productId,
+                            stock: { $gte: item.quantity },
+                        },
+                        {
+                            $inc: { stock: -item.quantity },
+                        },
+                        { session }
+                    )
+
+                    if (result.modifiedCount !== 1) {
+                        throw new Error(
+                            `Producto inexistente o stock insuficiente: ${item.productId}`
+                        )
+                    }
+                }
+            }
+
+            // No convertir un pago pendiente en rechazado
+            order.status = payment.status
+
+            order.mercadoPagoData.paymentId = String(payment.id)
+            order.mercadoPagoData.paymentStatus = payment.status
+            order.mercadoPagoData.transactionAmount = payment.transaction_amount
+            order.mercadoPagoData.paymentMethodId = payment.payment_method_id
+
+            if (payment.status === 'approved') {
+                order.mercadoPagoData.paidAt = payment.date_approved
+            }
+
+            await order.save({ session })
+        })
+
+        return res.status(200).json({
+            message: 'Notificación procesada correctamente',
+        })
+    } catch (error) {
+        console.error('Error al procesar webhook:', error.message)
+
+        return res.status(500).json({
+            message: 'No se pudo procesar la notificación',
         })
     }
-
-    res.status(200).json({
-        message: 'Webhook de payment procesado correctamente',
-    })
 }
 
 export default webHookController

@@ -64,7 +64,6 @@ export const createOrder = async (req, res) => {
             },
         })
 
-        console.log('RESULT DE LA PREFERENCIA CREADA', result)
         // Actualizar la orden con el ID de preferencia de MP
         savedOrder.mercadoPagoData.preferenceId = result.id
         await savedOrder.save()
@@ -76,7 +75,6 @@ export const createOrder = async (req, res) => {
             preferenceId: result.id,
         })
     } catch (error) {
-        console.log('Error al crear orden:', error)
         res.status(500).json({
             success: false,
             message: 'Error al crear la orden',

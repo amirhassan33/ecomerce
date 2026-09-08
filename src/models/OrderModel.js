@@ -46,6 +46,11 @@ const OrderSchema = new mongoose.Schema(
             default: 'pending',
         },
 
+        confirmationEmailSentAt: {
+            type: Date,
+            default: null,
+        },
+
         shippingInfo: {
             firstName: {
                 type: String,

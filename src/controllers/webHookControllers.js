@@ -3,6 +3,7 @@ import ProductModel from '../models/ProductModel.js'
 import { client } from '../config/mercadoPagoConfig.js'
 import { Payment } from 'mercadopago'
 import crypto from 'crypto'
+import { sendOrderConfirmationEmail } from '../services/emailService.js'
 
 const validateSignature = (req, res) => {
     try {
@@ -176,6 +177,23 @@ const webHookController = async (req, res) => {
 
             await order.save({ session })
         })
+
+        const approvedOrder = await OrderModel.findOne({
+            _id: orderId,
+            status: 'approved',
+            confirmationEmailSentAt: null,
+        })
+
+        if (approvedOrder) {
+            await sendOrderConfirmationEmail(approvedOrder)
+
+            approvedOrder.confirmationEmailSentAt = new Date()
+            await approvedOrder.save()
+
+            console.log(
+                `Correo de confirmación enviado para la orden ${approvedOrder._id}`
+            )
+        }
 
         return res.status(200).json({
             message: 'Notificación procesada correctamente',

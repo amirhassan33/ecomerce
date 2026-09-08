@@ -1,4 +1,5 @@
 import express from 'express'
+import { authenticateUser, requireAdmin } from '../middleware/authMiddleware.js'
 import {
     createProducts,
     deleteProduct,
@@ -12,10 +13,10 @@ router.get('/', getAllProducts)
 
 router.get('/:id', getProductById)
 
-router.post('/', createProducts)
+router.post('/', authenticateUser, requireAdmin, createProducts)
 
-router.put('/:id', updateProduct)
+router.put('/:id', authenticateUser, requireAdmin, updateProduct)
 
-router.delete('/:id', deleteProduct)
+router.delete('/:id', authenticateUser, requireAdmin, deleteProduct)
 
 export default router

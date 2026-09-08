@@ -3,7 +3,7 @@ import ProductModel from '../models/ProductModel.js' // Tenemos que validar que 
 
 export const addToCart = async (req, res) => {
     try {
-        const userId = req.user?._id || req.body.userId
+        const userId = req.user._id
         const { productId, quantity = 1 } = req.body
 
         if (!userId) {
@@ -85,7 +85,7 @@ export const addToCart = async (req, res) => {
 
 export const getCart = async (req, res) => {
     try {
-        const { userId } = req.params
+        const userId = req.user._id
 
         const cart = await CartModel.findOne({ userId }).populate(
             'products.productId'
@@ -109,7 +109,7 @@ export const getCart = async (req, res) => {
 
 export const updateCart = async (req, res) => {
     try {
-        const { userId } = req.params
+        const userId = req.user._id
         const { productId, quantity } = req.body
         console.log('UPDATE CART', productId, quantity)
 
@@ -162,7 +162,7 @@ export const updateCart = async (req, res) => {
 
 export const removeProductFromCart = async (req, res) => {
     try {
-        const { userId } = req.params
+        const userId = req.user._id
         const { productId } = req.body
 
         // Validar que se proporcionó el producId
@@ -209,7 +209,7 @@ export const removeProductFromCart = async (req, res) => {
 
 export const clearCart = async (req, res) => {
     try {
-        const { userId } = req.params
+        const userId = req.user._id
 
         const cart = await CartModel.findOne({ userId })
 
@@ -234,7 +234,7 @@ export const clearCart = async (req, res) => {
 
 export const getCartTotal = async (req, res) => {
     try {
-        const userId = req.user?._id || req.params.userId
+        const userId = req.user._id
 
         if (!userId) {
             return res.status(400).json({

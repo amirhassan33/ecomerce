@@ -13,6 +13,9 @@ dotenv.config()
 
 const app = express()
 
+// Vercel envía la IP real del visitante mediante su proxy.
+app.set('trust proxy', 1)
+
 const PORT = 3001
 
 app.use(

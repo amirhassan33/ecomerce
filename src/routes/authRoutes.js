@@ -1,5 +1,9 @@
 import express from 'express'
 import {
+    loginRateLimit,
+    registerRateLimit,
+} from '../middleware/authRateLimit.js'
+import {
     registerUser,
     profile,
     loginUser,
@@ -8,9 +12,9 @@ import {
 
 const router = express.Router()
 
-router.post('/register', registerUser)
+router.post('/register', registerRateLimit, registerUser)
 
-router.post('/login', loginUser)
+router.post('/login', loginRateLimit, loginUser)
 
 router.post('/logout', logout)
 

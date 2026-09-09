@@ -9,7 +9,7 @@ const validateSignature = (req, res) => {
     try {
         // Obtenemos la firma y el secreto
         const signature = req.headers['x-signature']
-        const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET
+        const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim()
 
         // Validamos que existan
         if (!signature || !secret) {
@@ -72,6 +72,17 @@ const webHookController = async (req, res) => {
         }
 
         if (!validateSignature(req)) {
+            console.warn('Webhook rechazado', {
+                applicationId: req.body?.application_id,
+                liveMode: req.body?.live_mode,
+                dataId: req.query['data.id'],
+                hasSignature: Boolean(req.headers['x-signature']),
+                hasRequestId: Boolean(req.headers['x-request-id']),
+                hasSecret: Boolean(process.env.MERCADOPAGO_WEBHOOK_SECRET),
+                secretLength:
+                    process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim().length || 0,
+            })
+
             return res.status(401).json({
                 message: 'Firma inválida',
             })

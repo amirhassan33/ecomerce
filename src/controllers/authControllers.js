@@ -34,7 +34,15 @@ export const registerUser = async (req, res) => {
             .status(201)
             .json({ message: 'Usuario registrado con exito' })
     } catch (error) {
-        res.json(error)
+        if (error instanceof ZodError) {
+            return res
+                .status(400)
+                .json(error.issues.map((issue) => ({ message: issue.message })))
+        }
+
+        return res.status(500).json({
+            message: 'Error al registrar el usuario',
+        })
     }
 }
 

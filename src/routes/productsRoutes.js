@@ -7,15 +7,28 @@ import {
     getProductById,
     updateProduct,
 } from '../controllers/productsControllers.js'
+import { uploadProductImage } from '../middleware/uploadProductImage.js'
 const router = express.Router()
 
 router.get('/', getAllProducts)
 
 router.get('/:id', getProductById)
 
-router.post('/', authenticateUser, requireAdmin, createProducts)
+router.post(
+    '/',
+    authenticateUser,
+    requireAdmin,
+    uploadProductImage,
+    createProducts
+)
 
-router.put('/:id', authenticateUser, requireAdmin, updateProduct)
+router.put(
+    '/:id',
+    authenticateUser,
+    requireAdmin,
+    uploadProductImage,
+    updateProduct
+)
 
 router.delete('/:id', authenticateUser, requireAdmin, deleteProduct)
 

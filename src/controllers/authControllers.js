@@ -1,8 +1,15 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import crypto from 'node:crypto'
 import UserModel from '../models/UserModel.js'
-import { registerSchema, loginSchema } from '../schemas/authSchema.js'
+import {
+    registerSchema,
+    loginSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
+} from '../schemas/authSchema.js'
 import { ZodError } from 'zod'
+import { sendPasswordResetEmail } from '../services/emailService.js'
 
 export const registerUser = async (req, res) => {
     try {
@@ -126,4 +133,95 @@ export const logout = (req, res) => {
     })
         .status(200)
         .json({ message: 'Cierre de sesion exitoso' })
+}
+
+export const forgotPassword = async (req, res) => {
+    const genericMessage =
+        'Si existe una cuenta con ese correo, recibirás un enlace para restablecer la contraseña.'
+
+    try {
+        const { email } = forgotPasswordSchema.parse(req.body)
+        const user = await UserModel.findOne({ email: email.toLowerCase() })
+
+        if (!user) {
+            return res.status(200).json({ message: genericMessage })
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex')
+        const resetPasswordTokenHash = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex')
+
+        user.resetPasswordTokenHash = resetPasswordTokenHash
+        user.resetPasswordExpiresAt = new Date(Date.now() + 15 * 60 * 1000)
+        await user.save()
+
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`
+
+        try {
+            await sendPasswordResetEmail(user.email, resetUrl)
+        } catch (error) {
+            user.resetPasswordTokenHash = null
+            user.resetPasswordExpiresAt = null
+            await user.save()
+            throw error
+        }
+
+        return res.status(200).json({ message: genericMessage })
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({ message: error.issues[0].message })
+        }
+
+        console.error('Error al solicitar recuperación:', error.message)
+        return res.status(500).json({
+            message: 'No se pudo procesar la solicitud. Intentá nuevamente.',
+        })
+    }
+}
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { password } = resetPasswordSchema.parse(req.body)
+        const resetPasswordTokenHash = crypto
+            .createHash('sha256')
+            .update(req.params.token)
+            .digest('hex')
+
+        const user = await UserModel.findOne({
+            resetPasswordTokenHash,
+            resetPasswordExpiresAt: { $gt: new Date() },
+        }).select('+resetPasswordTokenHash +resetPasswordExpiresAt')
+
+        if (!user) {
+            return res.status(400).json({
+                message: 'El enlace es inválido o venció. Solicitá uno nuevo.',
+            })
+        }
+
+        user.password = await bcrypt.hash(password, 10)
+        user.resetPasswordTokenHash = null
+        user.resetPasswordExpiresAt = null
+        await user.save()
+
+        res.clearCookie('accessToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        })
+
+        return res.status(200).json({
+            message: 'Contraseña actualizada correctamente.',
+        })
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({ message: error.issues[0].message })
+        }
+
+        console.error('Error al restablecer contraseña:', error.message)
+        return res.status(500).json({
+            message: 'No se pudo restablecer la contraseña.',
+        })
+    }
 }

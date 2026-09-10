@@ -21,3 +21,14 @@ export const registerRateLimit = rateLimit({
             'Se crearon demasiadas cuentas. Intentá nuevamente más tarde.',
     },
 })
+
+export const passwordResetRateLimit = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 5,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: {
+        message:
+            'Demasiadas solicitudes de recuperación. Intentá nuevamente más tarde.',
+    },
+})

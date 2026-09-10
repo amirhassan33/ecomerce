@@ -48,3 +48,28 @@ export const sendOrderConfirmationEmail = async (order) => {
 
     return data
 }
+
+export const sendPasswordResetEmail = async (email, resetUrl) => {
+    const { data, error } = await resend.emails.send({
+        from: process.env.EMAIL_FROM,
+        to: email,
+        subject: 'Restablecer contraseña',
+        html: `
+            <h1>Restablecer contraseña</h1>
+            <p>Recibimos una solicitud para cambiar tu contraseña.</p>
+            <p>
+                <a href="${resetUrl}">
+                    Crear una nueva contraseña
+                </a>
+            </p>
+            <p>Este enlace vence en 15 minutos y puede utilizarse una sola vez.</p>
+            <p>Si no solicitaste este cambio, ignorá este correo.</p>
+        `,
+    })
+
+    if (error) {
+        throw new Error(`Resend: ${error.message}`)
+    }
+
+    return data
+}

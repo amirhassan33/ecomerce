@@ -30,6 +30,16 @@ const UserSchema = new mongoose.Schema({
         default: false,
         required: true,
     },
+    resetPasswordTokenHash: {
+        type: String,
+        default: null,
+        select: false,
+    },
+    resetPasswordExpiresAt: {
+        type: Date,
+        default: null,
+        select: false,
+    },
 })
 
 export default mongoose.model('User', UserSchema)

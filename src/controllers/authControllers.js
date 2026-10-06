@@ -27,9 +27,11 @@ export const registerUser = async (req, res) => {
             password: hashedPassword,
             isAdmin: isFirsUser,
         })
-        const token = jwt.sign({ userId: newUser._id }, JWT_SECRET, {
-            expiresIn: '1h',
-        })
+        const token = jwt.sign(
+            { userId: newUser._id, username: newUser.username },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        )
 
         res.cookie('accessToken', token, {
             httpOnly: true,
@@ -37,9 +39,8 @@ export const registerUser = async (req, res) => {
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 60 * 60 * 1000,
         })
-
             .status(201)
-            .json({ message: 'Usuario registrado con exito' })
+            .json(userData)
     } catch (error) {
         if (error instanceof ZodError) {
             return res
@@ -76,10 +77,10 @@ export const loginUser = async (req, res) => {
         )
 
         const userData = {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            isAdmin: user.isAdmin,
+            id: newUser._id,
+            username: newUser.username,
+            email: newUser.email,
+            isAdmin: newUser.isAdmin,
         }
 
         res.cookie('accessToken', token, {

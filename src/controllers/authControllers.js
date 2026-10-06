@@ -104,24 +104,32 @@ export const loginUser = async (req, res) => {
 }
 
 export const profile = async (req, res) => {
-    const token = req.cookies.accessToken
+    const token = req.cookies?.accessToken
+
+    // Sin cookie = visitante no logueado. No es un error.
+    if (!token) {
+        return res.status(200).json({ user: null })
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
         const user = await UserModel.findById(decoded.userId)
+
         if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' })
+            return res.status(200).json({ user: null })
         }
+
         res.status(200).json({
-            id: user._id,
-            email: user.email,
-            isAdmin: user.isAdmin,
-            username: user.username,
+            user: {
+                id: user._id,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                username: user.username,
+            },
         })
     } catch (error) {
-        res.status(401).json({ message: 'No autorizado' })
-    }
-    return {
-        user: 'test user',
+        // Token vencido o inválido
+        res.status(200).json({ user: null })
     }
 }
 

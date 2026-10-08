@@ -27,11 +27,9 @@ export const registerUser = async (req, res) => {
             password: hashedPassword,
             isAdmin: isFirsUser,
         })
-        const token = jwt.sign(
-            { userId: newUser._id, username: newUser.username },
-            JWT_SECRET,
-            { expiresIn: '1h' }
-        )
+        const token = jwt.sign({ userId: newUser._id }, JWT_SECRET, {
+            expiresIn: '1h',
+        })
 
         res.cookie('accessToken', token, {
             httpOnly: true,
@@ -39,8 +37,9 @@ export const registerUser = async (req, res) => {
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 60 * 60 * 1000,
         })
+
             .status(201)
-            .json(userData)
+            .json({ message: 'Usuario registrado con exito' })
     } catch (error) {
         if (error instanceof ZodError) {
             return res
@@ -77,10 +76,10 @@ export const loginUser = async (req, res) => {
         )
 
         const userData = {
-            id: newUser._id,
-            username: newUser.username,
-            email: newUser.email,
-            isAdmin: newUser.isAdmin,
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            isAdmin: user.isAdmin,
         }
 
         res.cookie('accessToken', token, {
@@ -105,32 +104,24 @@ export const loginUser = async (req, res) => {
 }
 
 export const profile = async (req, res) => {
-    const token = req.cookies?.accessToken
-
-    // Sin cookie = visitante no logueado. No es un error.
-    if (!token) {
-        return res.status(200).json({ user: null })
-    }
-
+    const token = req.cookies.accessToken
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
         const user = await UserModel.findById(decoded.userId)
-
         if (!user) {
-            return res.status(200).json({ user: null })
+            return res.status(404).json({ message: 'Usuario no encontrado' })
         }
-
         res.status(200).json({
-            user: {
-                id: user._id,
-                email: user.email,
-                isAdmin: user.isAdmin,
-                username: user.username,
-            },
+            id: user._id,
+            email: user.email,
+            isAdmin: user.isAdmin,
+            username: user.username,
         })
     } catch (error) {
-        // Token vencido o inválido
-        res.status(200).json({ user: null })
+        res.status(401).json({ message: 'No autorizado' })
+    }
+    return {
+        user: 'test user',
     }
 }
 

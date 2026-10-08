@@ -91,11 +91,14 @@ export const getCart = async (req, res) => {
             'products.productId'
         )
 
-        // Si el usuario todavía no tiene carrito, devolvemos uno vacío (no es un error)
-        res.status(200).json({
-            message: 'Carrito obtenido con éxito',
-            cart: cart ?? { userId, products: [] },
-        })
+        if (cart) {
+            res.status(200).json({
+                message: 'Carrito obtenido con éxito',
+                cart,
+            })
+        } else {
+            res.status(404).json({ message: 'Carrito no econtrado' })
+        }
     } catch (error) {
         res.status(500).json({
             message: 'Error del servidor al obtener el carrito',

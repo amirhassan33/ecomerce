@@ -46,7 +46,8 @@ export const createOrder = async (req, res) => {
             if (!Number.isInteger(quantity) || quantity < 1) {
                 return res.status(400).json({
                     success: false,
-                    message: 'La cantidad de cada producto debe ser un entero mayor a cero',
+                    message:
+                        'La cantidad de cada producto debe ser un entero mayor a cero',
                 })
             }
 
@@ -101,8 +102,7 @@ export const createOrder = async (req, res) => {
         }
 
         const totalAmount = orderProducts.reduce(
-            (total, product) =>
-                total + product.price * product.quantity,
+            (total, product) => total + product.price * product.quantity,
             0
         )
 
@@ -131,6 +131,7 @@ export const createOrder = async (req, res) => {
                     failure: `${process.env.FRONTEND_URL}/payment/failure`,
                     pending: `${process.env.FRONTEND_URL}/payment/pending`,
                 },
+                auto_return: 'approved',
                 metadata: {
                     order_id: savedOrder._id.toString(),
                 },
@@ -207,8 +208,7 @@ export const getOrderById = async (req, res) => {
             })
         }
 
-        const isOwner =
-            order.userId?.toString() === req.user._id.toString()
+        const isOwner = order.userId?.toString() === req.user._id.toString()
 
         if (!isOwner && !req.user.isAdmin) {
             return res.status(403).json({

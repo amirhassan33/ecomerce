@@ -19,10 +19,16 @@ const OrderSchema = new mongoose.Schema(
                 price: {
                     type: Number,
                     required: true,
+                    min: 0.01,
                 },
                 quantity: {
                     type: Number,
                     required: true,
+                    min: 1,
+                    validate: {
+                        validator: Number.isInteger,
+                        message: 'La cantidad debe ser un número entero',
+                    },
                 },
                 imageUrl: String,
             },
@@ -31,7 +37,7 @@ const OrderSchema = new mongoose.Schema(
         totalAmount: {
             type: Number,
             required: true,
-            min: 0,
+            min: 0.01,
         },
 
         status: {
@@ -46,9 +52,26 @@ const OrderSchema = new mongoose.Schema(
             default: 'pending',
         },
 
+        // Control de correos de confirmación.
+        confirmationEmailClaimedAt: {
+            type: Date,
+            default: null,
+        },
+
         confirmationEmailSentAt: {
             type: Date,
             default: null,
+        },
+
+        confirmationEmailAttempts: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+
+        confirmationEmailNeedsReview: {
+            type: Boolean,
+            default: false,
         },
 
         shippingInfo: {
@@ -109,7 +132,9 @@ const OrderSchema = new mongoose.Schema(
             paidAt: Date,
         },
     },
-    { timestamps: true }
+    {
+        timestamps: true,
+    }
 )
 
 export default mongoose.model('Order', OrderSchema)

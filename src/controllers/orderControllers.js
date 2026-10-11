@@ -137,7 +137,14 @@ export const createOrder = async (req, res) => {
                 },
             },
         })
-
+        if (
+            typeof result?.id !== 'string' ||
+            !result.id.trim() ||
+            typeof result?.init_point !== 'string' ||
+            !result.init_point.trim()
+        ) {
+            throw new Error('Mercado Pago devolvió una preferencia incompleta')
+        }
         savedOrder.mercadoPagoData.preferenceId = result.id
         await savedOrder.save()
 

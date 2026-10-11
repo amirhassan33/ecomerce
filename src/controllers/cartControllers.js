@@ -17,10 +17,11 @@ export const addToCart = async (req, res) => {
                 .json({ message: 'El productId es requerido' })
         }
 
-        if (quantity < 1) {
-            return res
-                .status(400)
-                .json({ message: 'La cantidad debe ser al menos de 1' })
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            return res.status(400).json({
+                message:
+                    'La cantidad debe ser un número entero mayor o igual a 1',
+            })
         }
 
         // Verificar que el producto exista
@@ -42,10 +43,15 @@ export const addToCart = async (req, res) => {
                 (p) => p.productId.toString() === productId
             )
 
-            // Verificar el stock
-            if (product.stock < quantity) {
+            // Verificar el stock incluyendo las unidades que ya están en el carrito
+            const cantidadActual =
+                productIndex > -1 ? cart.products[productIndex].quantity : 0
+
+            const cantidadTotal = cantidadActual + quantity
+
+            if (cantidadTotal > product.stock) {
                 return res.status(400).json({
-                    message: `Solo hay ${product.stock} de unidades disponibles`,
+                    message: `Solo hay ${product.stock} unidades disponibles`,
                 })
             }
 
@@ -60,6 +66,13 @@ export const addToCart = async (req, res) => {
                 cart.products.push({ productId, quantity })
             }
         } else {
+            // Verificar el stock antes de crear un carrito nuevo
+            if (quantity > product.stock) {
+                return res.status(400).json({
+                    message: `Solo hay ${product.stock} unidades disponibles`,
+                })
+            }
+
             // Si no existe el carrito
             cart = new CartModel({
                 userId,
@@ -100,9 +113,8 @@ export const getCart = async (req, res) => {
             res.status(404).json({ message: 'Carrito no econtrado' })
         }
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Error del servidor al obtener el carrito',
-            error: error.message,
         })
     }
 }
@@ -112,6 +124,12 @@ export const updateCart = async (req, res) => {
         const userId = req.user._id
         const { productId, quantity } = req.body
         console.log('UPDATE CART', productId, quantity)
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            return res.status(400).json({
+                message:
+                    'La cantidad debe ser un número entero mayor o igual a 1',
+            })
+        }
 
         const cart = await CartModel.findOne({ userId })
 
@@ -153,9 +171,8 @@ export const updateCart = async (req, res) => {
             })
         }
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Error del servidor al actualizar el carrito',
-            error: error.message,
         })
     }
 }

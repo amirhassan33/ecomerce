@@ -15,12 +15,16 @@ const ProductSchema = new mongoose.Schema(
         price: {
             type: Number,
             required: true,
-            min: 0,
+            min: 0.01,
         },
         stock: {
             type: Number,
             required: true,
             min: 0,
+            validate: {
+                validator: Number.isInteger,
+                message: 'El stock debe ser un número entero',
+            },
         },
         imageUrl: {
             type: String,

@@ -8,10 +8,19 @@ export const connectDB = async () => {
         )
             .replace('<db_password>', process.env.MONGO_DB_PASSWORD)
             .replace('<db_name>', process.env.MONGO_DB_NAME)
+
         await mongoose.connect(dbUri)
+
         console.log('Connected to MongoDB')
+        console.log(
+            'Base utilizada por el servidor:',
+            mongoose.connection.db.databaseName
+        )
     } catch (error) {
-        console.error('Error connecting to MongoDB:', error)
+        console.error('Error connecting to MongoDB:', error.message)
+
+        // Impide que el servidor continúe si falla la conexión.
+        throw error
     }
 }
 
@@ -20,6 +29,6 @@ export const disconnectDB = async () => {
         await mongoose.disconnect()
         console.log('Base de datos MongoDB desconectada')
     } catch (error) {
-        console.error('Error al desconectar MongoDB: ', error)
+        console.error('Error al desconectar MongoDB:', error)
     }
 }

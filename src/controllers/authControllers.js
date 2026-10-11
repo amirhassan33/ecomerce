@@ -20,12 +20,11 @@ export const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'El usuario ya existe' })
         }
         const hashedPassword = await bcrypt.hash(password, 10)
-        const isFirsUser = (await UserModel.countDocuments()) === 0
         const newUser = await UserModel.create({
             username,
             email,
             password: hashedPassword,
-            isAdmin: isFirsUser,
+            isAdmin: false,
         })
         const token = jwt.sign({ userId: newUser._id }, JWT_SECRET, {
             expiresIn: '1h',
@@ -96,9 +95,8 @@ export const loginUser = async (req, res) => {
                 .status(400)
                 .json(error.issues.map((issue) => ({ message: issue.message })))
         }
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Error al iniciar sesion',
-            error: error,
         })
     }
 }
@@ -119,9 +117,6 @@ export const profile = async (req, res) => {
         })
     } catch (error) {
         res.status(401).json({ message: 'No autorizado' })
-    }
-    return {
-        user: 'test user',
     }
 }
 
@@ -189,21 +184,32 @@ export const resetPassword = async (req, res) => {
             .update(req.params.token)
             .digest('hex')
 
-        const user = await UserModel.findOne({
-            resetPasswordTokenHash,
-            resetPasswordExpiresAt: { $gt: new Date() },
-        }).select('+resetPasswordTokenHash +resetPasswordExpiresAt')
+        const hashedPassword = await bcrypt.hash(password, 10)
+
+        const user = await UserModel.findOneAndUpdate(
+            {
+                resetPasswordTokenHash,
+                resetPasswordExpiresAt: { $gt: new Date() },
+            },
+            {
+                $set: {
+                    password: hashedPassword,
+                },
+                $unset: {
+                    resetPasswordTokenHash: '',
+                    resetPasswordExpiresAt: '',
+                },
+            },
+            {
+                new: true,
+            }
+        )
 
         if (!user) {
             return res.status(400).json({
                 message: 'El enlace es inválido o venció. Solicitá uno nuevo.',
             })
         }
-
-        user.password = await bcrypt.hash(password, 10)
-        user.resetPasswordTokenHash = null
-        user.resetPasswordExpiresAt = null
-        await user.save()
 
         res.clearCookie('accessToken', {
             httpOnly: true,

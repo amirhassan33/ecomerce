@@ -19,6 +19,10 @@ const CartSchema = new mongoose.Schema(
                     required: true,
                     default: 1,
                     min: 1,
+                    validate: {
+                        validator: Number.isInteger,
+                        message: 'La cantidad debe ser un número entero',
+                    },
                 },
             },
         ],

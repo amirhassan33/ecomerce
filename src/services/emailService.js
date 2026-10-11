@@ -3,12 +3,20 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+const escapeHtml = (value) =>
+    String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+
 export const sendOrderConfirmationEmail = async (order) => {
     const productsHtml = order.products
         .map(
             (product) => `
                 <li>
-                    ${product.name} — Cantidad: ${product.quantity}
+                    ${escapeHtml(product.name)} — Cantidad: ${product.quantity}
                     — $${product.price.toLocaleString('es-AR')}
                 </li>
             `
@@ -23,7 +31,7 @@ export const sendOrderConfirmationEmail = async (order) => {
             <h1>¡Gracias por tu compra!</h1>
 
             <p>
-                Hola ${order.shippingInfo.firstName},
+                Hola ${escapeHtml(order.shippingInfo.firstName)},
                 recibimos correctamente tu pago.
             </p>
 
@@ -59,7 +67,7 @@ export const sendPasswordResetEmail = async (email, resetUrl) => {
             <h1>Restablecer contraseña</h1>
             <p>Recibimos una solicitud para cambiar tu contraseña.</p>
             <p>
-                <a href="${resetUrl}">
+                <a href="${escapeHtml(resetUrl)}">
                     Crear una nueva contraseña
                 </a>
             </p>

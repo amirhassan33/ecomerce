@@ -12,6 +12,41 @@ export const getMercadoPagoPayment = async (paymentId) => {
     return new Payment(client).get({ id: paymentId })
 }
 
+// Diagnóstico sin secretos, hashes, identificadores ni datos del comprador.
+// No cambia qué notificaciones se aceptan.
+const signatureDiagnostics = (req) => {
+    const header = req.headers['x-signature']
+    const parts = typeof header === 'string'
+        ? header.split(',').map((part) => part.trim())
+        : []
+    const ts = parts.find((part) => part.startsWith('ts='))?.slice(3)
+    const hash = parts.find((part) => part.startsWith('v1='))?.slice(3)
+    const queryId = req.query?.['data.id']
+    const bodyId = req.body?.data?.id
+    const requestId = req.headers['x-request-id']
+    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim()
+
+    const matches = (id) => {
+        if (id == null || !requestId || !ts || !secret ||
+            !/^[a-fA-F0-9]{64}$/.test(hash || '')) return false
+        const manifest = `id:${String(id)};request-id:${requestId};ts:${ts};`
+        const expected = crypto.createHmac('sha256', secret)
+            .update(manifest).digest()
+        return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), expected)
+    }
+
+    return {
+        formatoFirmaValido: /^[a-fA-F0-9]{64}$/.test(hash || ''),
+        timestampNumerico: /^\d+$/.test(ts || ''),
+        idQueryYBodyCoinciden: queryId == null || bodyId == null
+            ? null : String(queryId) === String(bodyId),
+        coincideConIdQuery: matches(queryId),
+        coincideConIdBody: matches(bodyId),
+        coincideConIdEnMinusculas: queryId == null
+            ? false : matches(String(queryId).toLowerCase()),
+    }
+}
+
 const validateSignature = (req) => {
     try {
         const signature = req.headers['x-signature']
@@ -84,6 +119,7 @@ export const createWebHookController = ({
                     tieneSecreto: Boolean(
                         process.env.MERCADOPAGO_WEBHOOK_SECRET
                     ),
+                    diagnosticoFirma: signatureDiagnostics(req),
                 })
 
                 return res.status(401).json({

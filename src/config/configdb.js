@@ -20,12 +20,19 @@ export const connectDB = async () => {
         ]
         const missing = required.filter((key) => !process.env[key])
         if (missing.length) {
-            throw new Error(`Faltan variables de MongoDB: ${missing.join(', ')}`)
+            throw new Error(
+                `Faltan variables de MongoDB: ${missing.join(', ')}`
+            )
         }
 
-        const dbUri = process.env.MONGO_DB_URI
-            .replace('<db_username>', encodeURIComponent(process.env.MONGO_DB_USER))
-            .replace('<db_password>', encodeURIComponent(process.env.MONGO_DB_PASSWORD))
+        const dbUri = process.env.MONGO_DB_URI.replace(
+            '<db_username>',
+            encodeURIComponent(process.env.MONGO_DB_USER)
+        )
+            .replace(
+                '<db_password>',
+                encodeURIComponent(process.env.MONGO_DB_PASSWORD)
+            )
             .replace('<db_name>', process.env.MONGO_DB_NAME)
 
         await mongoose.connect(dbUri, {
@@ -33,9 +40,6 @@ export const connectDB = async () => {
             maxPoolSize: 10,
             bufferCommands: false,
         })
-
-        console.log('Connected to MongoDB')
-        console.log('Base utilizada por el servidor:', mongoose.connection.db.databaseName)
         return mongoose.connection
     })()
 
@@ -52,5 +56,4 @@ export const connectDB = async () => {
 export const disconnectDB = async () => {
     pendingConnection = null
     await mongoose.disconnect()
-    console.log('Base de datos MongoDB desconectada')
 }

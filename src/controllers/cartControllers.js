@@ -35,7 +35,6 @@ export const addToCart = async (req, res) => {
         let cart = await CartModel.findOne({ userId })
 
         if (cart) {
-            console.log('USUARIO YA TIENE CARRITO')
             // Si ya existe el carrito, busca el producto
 
             // Si ya existe, buacamos el producto
@@ -60,8 +59,6 @@ export const addToCart = async (req, res) => {
                 // PRODUCTO YA EXISTE EN CARRITO DEL USUARIO, SOLO ACTUALIZAR LA CANTIDAD
                 cart.products[productIndex].quantity += quantity
             } else {
-                console.log('USUARIO NO TIENE CARRITO')
-
                 // NUEVO PRODUCTO AGREGADO AL CARRITO
                 cart.products.push({ productId, quantity })
             }
@@ -123,7 +120,6 @@ export const updateCart = async (req, res) => {
     try {
         const userId = req.user._id
         const { productId, quantity } = req.body
-        console.log('UPDATE CART', productId, quantity)
         if (!Number.isInteger(quantity) || quantity < 1) {
             return res.status(400).json({
                 message:

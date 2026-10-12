@@ -37,6 +37,20 @@ app.use(
 app.use(cookieParser())
 app.use(express.json())
 app.use(csrfProtection)
+// Vercel puede atender solicitudes sin esperar el arranque tradicional.
+// Todas las rutas que consultan MongoDB esperan una conexión lista.
+app.use('/api', async (req, res, next) => {
+    try {
+        await connectDB()
+        next()
+    } catch (error) {
+        console.error('MongoDB no disponible para solicitud:', error.message)
+        res.set('Retry-After', '10')
+        return res.status(503).json({
+            message: 'Base de datos temporalmente no disponible',
+        })
+    }
+})
 app.use('/api/auth', authRoutes)
 app.use('/api/products', productsRoutes)
 app.use('/api/cart', cartRoutes)

@@ -24,7 +24,12 @@ const validateSignature = (req) => {
         const hash = parts.find((part) => part.startsWith('v1='))?.split('=')[1]
 
         const xRequestId = req.headers['x-request-id']
-        const dataId = req.query['data.id']
+        const rawDataId = req.query?.['data.id'] ?? req.body?.data?.id
+
+        const dataId =
+            typeof rawDataId === 'string' || typeof rawDataId === 'number'
+                ? String(rawDataId)
+                : null
 
         if (
             typeof dataId !== 'string' ||
@@ -71,7 +76,15 @@ export const createWebHookController = ({
             }
 
             if (!validateSignature(req)) {
-                console.warn('Webhook rechazado: firma inválida o ausente')
+                console.warn('Webhook rechazado:', {
+                    tieneFirma: Boolean(req.headers['x-signature']),
+                    tieneRequestId: Boolean(req.headers['x-request-id']),
+                    tieneIdEnQuery: Boolean(req.query?.['data.id']),
+                    tieneIdEnBody: Boolean(req.body?.data?.id),
+                    tieneSecreto: Boolean(
+                        process.env.MERCADOPAGO_WEBHOOK_SECRET
+                    ),
+                })
 
                 return res.status(401).json({
                     message: 'Firma inválida',
@@ -80,6 +93,7 @@ export const createWebHookController = ({
 
             if (
                 req.body?.data?.id != null &&
+                req.query?.['data.id'] != null &&
                 String(req.body.data.id) !== String(req.query['data.id'])
             ) {
                 return res.status(400).json({
@@ -87,7 +101,9 @@ export const createWebHookController = ({
                 })
             }
 
-            const paymentId = req.query['data.id']
+            const paymentId = String(
+                req.query?.['data.id'] ?? req.body?.data?.id
+            )
             const payment = await getPayment(paymentId)
 
             if (String(payment.id) !== String(paymentId)) {

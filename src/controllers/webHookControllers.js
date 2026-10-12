@@ -1,5 +1,6 @@
 import OrderModel from '../models/OrderModel.js'
 import ProductModel from '../models/ProductModel.js'
+import CartModel from '../models/CartModel.js'
 import { client } from '../config/mercadoPagoConfig.js'
 import { Payment } from 'mercadopago'
 import crypto from 'crypto'
@@ -153,9 +154,9 @@ export const createWebHookController = ({
                 req.query?.['data.id'] ?? req.body?.data?.id
             )
 
-            if (!/^\d+$/.test(paymentId)) {
+            if (!paymentId || paymentId === 'undefined') {
                 return res.status(400).json({
-                    message: 'ID de pago inválido',
+                    message: 'Falta el ID de pago',
                 })
             }
             const payment = await getPayment(paymentId)
@@ -212,6 +213,9 @@ export const createWebHookController = ({
                     message: 'Estado no implementado; requiere revisión',
                 })
             }
+
+            let approvedNow = false
+            let approvedOrder = null
 
             // Pedido y stock se actualizan en una misma transacción.
             await OrderModel.db.transaction(async (session) => {
@@ -304,7 +308,39 @@ export const createWebHookController = ({
                 }
 
                 await order.save({ session })
+
+                if (payment.status === 'approved') {
+                    approvedNow = true
+                    approvedOrder = order
+                }
             })
+
+            // Primera aprobación del pedido: se quitan del carrito del
+            // comprador los productos que acaba de pagar. Si falla, no
+            // afecta al pago ni al pedido (ya confirmados).
+            if (approvedNow && approvedOrder?.userId) {
+                try {
+                    await CartModel.updateOne(
+                        { userId: approvedOrder.userId },
+                        {
+                            $pull: {
+                                products: {
+                                    productId: {
+                                        $in: approvedOrder.products.map(
+                                            (item) => item.productId
+                                        ),
+                                    },
+                                },
+                            },
+                        }
+                    )
+                } catch (cartError) {
+                    console.error(
+                        'No se pudo vaciar el carrito:',
+                        cartError.message
+                    )
+                }
+            }
 
             // El servicio centralizado controla las reservas de correo.
             // No recupera automáticamente reservas antiguas ni pedidos

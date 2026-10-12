@@ -132,8 +132,6 @@ export const createOrder = async (req, res) => {
                     pending: `${process.env.FRONTEND_URL}/payment/pending`,
                 },
                 auto_return: 'approved',
-                notification_url:
-                    'https://ecomerce-olive.vercel.app/api/webhook',
                 metadata: {
                     order_id: savedOrder._id.toString(),
                 },

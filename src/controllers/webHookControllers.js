@@ -110,21 +110,33 @@ export const createWebHookController = ({
                 })
             }
 
-            if (!validateSignature(req)) {
-                console.warn('Webhook rechazado:', {
+            const signatureIsValid = validateSignature(req)
+
+            if (!signatureIsValid) {
+                console.warn('Firma de webhook no coincide:', {
                     tieneFirma: Boolean(req.headers['x-signature']),
                     tieneRequestId: Boolean(req.headers['x-request-id']),
-                    tieneIdEnQuery: Boolean(req.query?.['data.id']),
-                    tieneIdEnBody: Boolean(req.body?.data?.id),
                     tieneSecreto: Boolean(
                         process.env.MERCADOPAGO_WEBHOOK_SECRET
                     ),
                     diagnosticoFirma: signatureDiagnostics(req),
                 })
 
-                return res.status(401).json({
-                    message: 'Firma inválida',
-                })
+                // Modo estricto (opcional): rechaza si la firma no coincide.
+                // Activar con MERCADOPAGO_WEBHOOK_STRICT=true en Vercel
+                // cuando el secreto ya esté correctamente configurado.
+                if (process.env.MERCADOPAGO_WEBHOOK_STRICT === 'true') {
+                    return res.status(401).json({
+                        message: 'Firma inválida',
+                    })
+                }
+
+                // Modo por defecto: no se confía en la notificación, se
+                // consulta el pago real a la API de Mercado Pago y se
+                // validan receptor, monto, moneda y referencia de la orden.
+                console.warn(
+                    'Se continúa: el pago se verifica con la API de Mercado Pago'
+                )
             }
 
             if (
@@ -140,6 +152,12 @@ export const createWebHookController = ({
             const paymentId = String(
                 req.query?.['data.id'] ?? req.body?.data?.id
             )
+
+            if (!/^\d+$/.test(paymentId)) {
+                return res.status(400).json({
+                    message: 'ID de pago inválido',
+                })
+            }
             const payment = await getPayment(paymentId)
 
             if (String(payment.id) !== String(paymentId)) {

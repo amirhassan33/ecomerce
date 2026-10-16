@@ -7,6 +7,7 @@ import dotenv from 'dotenv'
 import orderRoutes from './routes/orderRoutes.js'
 import webhookRoutes from './routes/webhookRoutes.js'
 import cors from 'cors'
+import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
 import emailRecoveryRoutes from './routes/emailRecoveryRoutes.js'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -20,6 +21,9 @@ const app = express()
 app.set('trust proxy', 1)
 
 const PORT = process.env.PORT || 3001
+
+// Cabeceras de seguridad HTTP (X-Content-Type-Options, HSTS, etc.).
+app.use(helmet())
 
 app.use(
     cors({

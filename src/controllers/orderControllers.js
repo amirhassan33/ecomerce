@@ -184,15 +184,47 @@ export const getMyOrders = async (req, res) => {
     }
 }
 
+const MAX_ORDERS_PER_PAGE = 50
+const DEFAULT_ORDERS_PER_PAGE = 10
+
 export const getAllOrders = async (req, res) => {
     try {
+        const requestedPage = Number.parseInt(req.query.page, 10)
+        const requestedLimit = Number.parseInt(req.query.limit, 10)
+
+        const limit = Math.min(
+            Number.isInteger(requestedLimit) && requestedLimit > 0
+                ? requestedLimit
+                : DEFAULT_ORDERS_PER_PAGE,
+            MAX_ORDERS_PER_PAGE
+        )
+
+        const total = await OrderModel.countDocuments()
+        const totalPages = Math.max(Math.ceil(total / limit), 1)
+
+        // Si piden una página inexistente, se devuelve la última.
+        const page = Math.min(
+            Number.isInteger(requestedPage) && requestedPage > 0
+                ? requestedPage
+                : 1,
+            totalPages
+        )
+
         const orders = await OrderModel.find()
             .populate('userId', 'username email')
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1, _id: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
 
         return res.status(200).json({
             success: true,
             orders,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+            },
         })
     } catch (error) {
         console.error('Error al obtener las órdenes:', error.message)
